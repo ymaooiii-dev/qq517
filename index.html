@@ -4,18 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>纸上江湖 - 官方网站</title>
-    <!-- Tailwind CSS -->
+    
+    <!-- 1. 字体加速：使用国内 loli.net 镜像引入 Noto Serif SC 字体 -->
+    <link rel="preconnect" href="https://fonts.loli.net">
+    <link rel="preconnect" href="https://gstatic.loli.net" crossorigin>
+    <link href="https://fonts.loli.net/css2?family=Noto+Serif+SC:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <!-- 2. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 3. 核心库换源：使用国内 Staticfile CDN 镜像，无需梯子即可访问 -->
+    <!-- React -->
+    <script crossorigin src="https://cdn.staticfile.net/react/18.2.0/umd/react.production.min.js"></script>
+    <!-- ReactDOM -->
+    <script crossorigin src="https://cdn.staticfile.net/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <!-- Babel (用于解析 JSX) -->
+    <script src="https://cdn.staticfile.net/babel-standalone/7.23.5/babel.min.js"></script>
     
     <style>
         /* Custom Styles */
         body {
-            font-family: 'Noto Serif SC', serif;
+            /* 优先使用网络字体，回退到系统宋体 */
+            font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
         }
         .hide-scrollbar::-webkit-scrollbar {
             display: none;
@@ -224,7 +234,7 @@
 
                                 {/* CTA Button */}
                                 <div className="relative z-20 order-last md:order-none mt-4 md:mt-0 flex-shrink-0 transform scale-90 md:scale-100">
-                                    <div className="relative group cursor-pointer active:scale-95 transition-transform duration-100">
+                                    <a href="https://ymaooiii-dev.github.io/zstb1/" className="block relative group cursor-pointer active:scale-95 transition-transform duration-100">
                                         <div className="absolute inset-0 bg-[#b91c1c] blur-xl opacity-20 group-hover:opacity-40 transition-opacity animate-pulse"></div>
                                         <div className="w-32 h-32 md:w-40 md:h-40 border-4 border-[#b91c1c] rounded-full flex items-center justify-center bg-[#f0e6d2] shadow-[0_0_0_8px_rgba(185,28,28,0.1)] relative overflow-hidden">
                                             <div className="absolute inset-0 border-2 border-[#b91c1c] rounded-full m-1 border-dashed opacity-50"></div>
@@ -232,7 +242,7 @@
                                                 <span className="writing-vertical text-3xl md:text-4xl font-black text-[#b91c1c] tracking-widest font-serif leading-none select-none">入局</span>
                                             </div>
                                         </div>
-                                    </div>
+                                    </a>
                                     <p className="text-center mt-4 text-[#b91c1c] text-xs font-bold tracking-widest">TAP TO START</p>
                                 </div>
 
