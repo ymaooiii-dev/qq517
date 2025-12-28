@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纸上江湖 - 官方网站</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* Custom Styles */
+        body {
+            font-family: 'Noto Serif SC', serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .writing-vertical {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons (Implemented as SVG components to avoid external dependency issues) ---
+        const Icon = ({ path, className, size = 24 }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        const Scroll = (props) => <Icon {...props} path={<><path d="M8 19l-2 2-2-2"/><path d="M2 15V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10"/><path d="M14 2v6h6"/><path d="M8 19v-8"/><path d="M12 19V7"/><path d="M16 19v-4"/></>} />;
+        const Sword = (props) => <Icon {...props} path={<><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></>} />; // Simplified sword
+        const Users = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+        const Ghost = (props) => <Icon {...props} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
+        const Gem = (props) => <Icon {...props} path={<><path d="M6 3h12l4 6-10 13L2 9z"/></>} />;
+        const ChevronRight = (props) => <Icon {...props} path={<polyline points="9 18 15 12 9 6"/>} />;
+        const Share2 = (props) => <Icon {...props} path={<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>} />;
+        const Crown = (props) => <Icon {...props} path={<><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></>} />;
+        const Sparkles = (props) => <Icon {...props} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 5H5"/><path d="M3 7h2"/></>} />;
+        const Trophy = (props) => <Icon {...props} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} />;
+        const Medal = (props) => <Icon {...props} path={<><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></>} />;
+        const Hammer = (props) => <Icon {...props} path={<><path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25V7.86c0-.55-.45-1-1-1H14.14c-.85 0-1.65-.33-2.25-.93L10.64 4.63c-.78-.78-2.05-.78-2.83 0l-9.5 9.5a2 2 0 0 0 0 2.83l6.93 6.93c.78.78 2.05.78 2.83 0l9.5-9.5c.78-.78.78-2.05 0-2.83Z"/></>} />;
+        const HelpCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></>} />;
+        const X = (props) => <Icon {...props} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+        const CheckCircle = (props) => <Icon {...props} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />;
+        const Copy = (props) => <Icon {...props} path={<><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>} />;
+        const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} />;
+        const Loader2 = (props) => <Icon {...props} path={<><path d="M21 12a9 9 0 1 1-6.219-8.56"/></>} />;
+
+        // --- Main Component ---
+        function PaperJianghu() {
+            const [activeTab, setActiveTab] = useState('chang-an');
+            const [scrolled, setScrolled] = useState(false);
+            const [showQuiz, setShowQuiz] = useState(false);
+            const [quizStep, setQuizStep] = useState(0); 
+            const [weiboName, setWeiboName] = useState('');
+            const [generatedCodes, setGeneratedCodes] = useState([]);
+            const [shake, setShake] = useState(false);
+            const [copiedIndex, setCopiedIndex] = useState(null);
+
+            useEffect(() => {
+                const handleScroll = () => setScrolled(window.scrollY > 20);
+                window.addEventListener('scroll', handleScroll);
+                return () => window.removeEventListener('scroll', handleScroll);
+            }, []);
+
+            const paperStyle = {
+                backgroundColor: '#f0e6d2',
+                backgroundImage: `
+                radial-gradient(#dbcbb0 1px, transparent 1px),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E")
+                `,
+                backgroundSize: '20px 20px, auto'
+            };
+
+            const handleAnswer = (isCorrect) => {
+                if (isCorrect) {
+                    setQuizStep(prev => prev + 1);
+                } else {
+                    setShake(true);
+                    setTimeout(() => setShake(false), 500);
+                }
+            };
+
+            const handleVerify = () => {
+                if (!weiboName.trim()) {
+                    setShake(true);
+                    setTimeout(() => setShake(false), 500);
+                    return;
+                }
+                setQuizStep(7);
+                setTimeout(() => {
+                    const codes = Array(3).fill(0).map((_, i) => {
+                        const randomNum = Math.floor(1000 + Math.random() * 9000);
+                        return `CY-Lv10-${randomNum}-${i+1}`;
+                    });
+                    setGeneratedCodes(codes);
+                    setQuizStep(8);
+                }, 2000);
+            };
+
+            const resetQuiz = () => {
+                setShowQuiz(false);
+                setQuizStep(0);
+                setWeiboName('');
+                setGeneratedCodes([]);
+                setCopiedIndex(null);
+            };
+
+            const copyToClipboard = (text, index) => {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.opacity = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    setCopiedIndex(index);
+                    setTimeout(() => setCopiedIndex(null), 2000);
+                } catch (err) {
+                    console.error('Fallback: Oops, unable to copy', err);
+                }
+                document.body.removeChild(textArea);
+            };
+
+            return (
+                <div style={paperStyle} className="min-h-screen text-[#2a231d] selection:bg-[#b91c1c] selection:text-[#f0e6d2] overflow-x-hidden relative">
+                    {/* 顶部彩蛋 */}
+                    <div className="w-full bg-[#b91c1c]/5 text-[#b91c1c] text-center text-[10px] md:text-xs py-1 tracking-[0.2em] font-bold border-b border-[#b91c1c]/10">
+                        淇淇 <span className="mx-1 animate-pulse">❤</span> 果果 专属定制
+                    </div>
+
+                    {/* Navigation */}
+                    <nav className={`fixed w-full z-50 transition-all duration-500 ${scrolled ? 'bg-[#f0e6d2]/90 backdrop-blur-sm shadow-sm border-b border-[#2a231d]/10' : 'bg-transparent'}`}>
+                        <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 md:w-8 md:h-8 border-2 border-[#2a231d] rounded-sm flex items-center justify-center bg-[#b91c1c] text-[#f0e6d2]">
+                                    <span className="font-bold text-base md:text-lg leading-none mt-1">纸</span>
+                                </div>
+                                <span className="text-lg md:text-xl font-bold tracking-widest text-[#2a231d]">纸上江湖</span>
+                            </div>
+                            <button className="hidden sm:flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 border border-[#2a231d] rounded-full text-xs md:text-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] transition-colors">
+                                <Share2 size={14} />
+                                <span>分享邀请码</span>
+                            </button>
+                        </div>
+                    </nav>
+
+                    {/* Hero Section */}
+                    <section className="relative pt-20 md:pt-24 pb-12 min-h-screen md:min-h-[90vh] flex flex-col justify-center overflow-hidden">
+                        <div className="absolute inset-0 opacity-10 pointer-events-none">
+                            <div className="absolute top-0 right-0 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-gradient-to-bl from-black to-transparent rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+                            <div className="absolute bottom-0 left-0 w-[400px] md:w-[600px] h-[400px] md:h-[600px] bg-gradient-to-tr from-[#2a231d] to-transparent rounded-full blur-3xl transform -translate-x-1/3 translate-y-1/3"></div>
+                        </div>
+
+                        <div className="max-w-6xl mx-auto px-4 w-full relative z-10">
+                            <div className="text-center mb-8 md:mb-12 mt-4 md:mt-0">
+                                <h2 className="text-[#b91c1c] font-bold tracking-[0.3em] md:tracking-[0.5em] text-xs md:text-base mb-2 md:mb-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                                    —— 谢淮安 X 李莲花 ——
+                                </h2>
+                                <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-[#2a231d] leading-tight mb-2 tracking-tighter drop-shadow-sm">
+                                    纸上谈兵<br />
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2a231d] to-[#b91c1c]">亦可破局</span>
+                                </h1>
+                                <p className="mt-4 text-base md:text-lg text-[#2a231d]/70 italic font-medium px-4">双线剧情 · 宿命对决 · 放置挂机</p>
+                                <p className="mt-3 text-xs md:text-sm text-[#b91c1c]/80 font-bold tracking-widest animate-pulse">更多角色和剧情正在开发中，敬请期待...</p>
+                            </div>
+
+                            <div className="flex flex-col md:flex-row items-center md:items-end justify-center gap-12 md:gap-24 relative mt-4 md:mt-8 pb-8 md:pb-0">
+                                {/* Divider */}
+                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-64 bg-gradient-to-b from-transparent via-[#b91c1c]/30 to-transparent md:block hidden"></div>
+
+                                {/* Xie Huaian */}
+                                <div className="flex flex-col items-center group cursor-pointer w-full md:w-auto">
+                                    <div className="relative w-40 h-56 md:w-64 md:h-80 transition-transform duration-500 hover:-translate-y-2 hover:rotate-1">
+                                        <div className="absolute inset-0 bg-black/10 transform translate-x-2 translate-y-2 blur-sm rounded-lg" style={{clipPath: 'polygon(10% 0, 100% 5%, 95% 100%, 0% 95%)'}}></div>
+                                        <svg viewBox="0 0 200 300" className="w-full h-full drop-shadow-xl animate-[float_4s_ease-in-out_infinite]">
+                                            <path d="M100 45 Q 60 80 65 160" stroke="#9ca3af" strokeWidth="4" fill="none"/>
+                                            <path d="M100 45 Q 140 80 135 160" stroke="#9ca3af" strokeWidth="4" fill="none"/>
+                                            <line x1="100" y1="80" x2="100" y2="200" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="200" x2="70" y2="280" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="200" x2="130" y2="280" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="110" x2="60" y2="150" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="110" x2="140" y2="150" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <circle cx="100" cy="60" r="25" fill="#f0e6d2" stroke="#2a231d" strokeWidth="4"/>
+                                            <path d="M80 50 Q 100 35 120 50" stroke="#9ca3af" strokeWidth="3" fill="none"/>
+                                            <line x1="60" y1="150" x2="40" y2="250" stroke="#5c4033" strokeWidth="3"/>
+                                            <path d="M30 250 L50 250 L50 280 Q 40 290 30 280 Z" fill="#525252" />
+                                            <path d="M90 60 L110 60" stroke="#2a231d" strokeWidth="2"/>
+                                        </svg>
+                                    </div>
+                                    <div className="mt-4 md:mt-6 text-center">
+                                        <div className="bg-[#2a231d] text-[#f0e6d2] px-3 py-1 text-xs mb-2 inline-block rounded-sm">长安线</div>
+                                        <h3 className="text-xl md:text-2xl font-bold text-[#2a231d]">谢淮安</h3>
+                                        <p className="text-xs md:text-sm text-[#2a231d]/60 font-medium mt-1">"只要锄头挥得好，没有反派挖不倒"</p>
+                                    </div>
+                                </div>
+
+                                {/* CTA Button */}
+                                <div className="relative z-20 order-last md:order-none mt-4 md:mt-0 flex-shrink-0 transform scale-90 md:scale-100">
+                                    <div className="relative group cursor-pointer active:scale-95 transition-transform duration-100">
+                                        <div className="absolute inset-0 bg-[#b91c1c] blur-xl opacity-20 group-hover:opacity-40 transition-opacity animate-pulse"></div>
+                                        <div className="w-32 h-32 md:w-40 md:h-40 border-4 border-[#b91c1c] rounded-full flex items-center justify-center bg-[#f0e6d2] shadow-[0_0_0_8px_rgba(185,28,28,0.1)] relative overflow-hidden">
+                                            <div className="absolute inset-0 border-2 border-[#b91c1c] rounded-full m-1 border-dashed opacity-50"></div>
+                                            <div className="flex flex-col items-center">
+                                                <span className="writing-vertical text-3xl md:text-4xl font-black text-[#b91c1c] tracking-widest font-serif leading-none select-none">入局</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-center mt-4 text-[#b91c1c] text-xs font-bold tracking-widest">TAP TO START</p>
+                                </div>
+
+                                {/* Li Lianhua */}
+                                <div className="flex flex-col items-center group cursor-pointer w-full md:w-auto">
+                                    <div className="relative w-40 h-56 md:w-64 md:h-80 transition-transform duration-500 hover:-translate-y-2 hover:-rotate-1">
+                                        <div className="absolute inset-0 bg-black/10 transform translate-x-2 translate-y-2 blur-sm rounded-lg" style={{clipPath: 'polygon(5% 5%, 90% 0, 100% 95%, 10% 100%)'}}></div>
+                                        <svg viewBox="0 0 200 300" className="w-full h-full drop-shadow-xl animate-[float_4s_ease-in-out_infinite_1s]">
+                                            <line x1="100" y1="80" x2="100" y2="200" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <path d="M100 100 Q 140 150 130 250" stroke="#2a231d" strokeWidth="2" fill="none" strokeDasharray="5,5"/>
+                                            <path d="M100 100 Q 60 150 70 250" stroke="#2a231d" strokeWidth="2" fill="none" strokeDasharray="5,5"/>
+                                            <line x1="100" y1="200" x2="85" y2="280" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="200" x2="115" y2="280" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="110" x2="70" y2="150" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="110" x2="150" y2="140" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <circle cx="100" cy="60" r="25" fill="#f0e6d2" stroke="#2a231d" strokeWidth="4"/>
+                                            <path d="M100 35 L100 10" stroke="#2a231d" strokeWidth="3"/>
+                                            <circle cx="100" cy="10" r="3" fill="#2a231d"/>
+                                            <line x1="150" y1="140" x2="160" y2="240" stroke="#b91c1c" strokeWidth="2"/>
+                                            <line x1="145" y1="180" x2="165" y2="180" stroke="#2a231d" strokeWidth="2"/>
+                                            <path d="M90 55 Q 100 65 110 55" stroke="#2a231d" strokeWidth="2" fill="none"/>
+                                        </svg>
+                                    </div>
+                                    <div className="mt-4 md:mt-6 text-center">
+                                        <div className="bg-[#b91c1c] text-[#f0e6d2] px-3 py-1 text-xs mb-2 inline-block rounded-sm">江湖线</div>
+                                        <h3 className="text-xl md:text-2xl font-bold text-[#2a231d]">李莲花</h3>
+                                        <p className="text-xs md:text-sm text-[#2a231d]/60 font-medium mt-1">"去去重去去，来来来来来"</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Features Grid */}
+                    <section className="py-12 md:py-20 relative border-t-2 border-[#2a231d]/10">
+                        <div className="max-w-6xl mx-auto px-4 md:px-6">
+                            <div className="flex items-center justify-center mb-10 md:mb-16 gap-4">
+                                <div className="h-px w-8 md:w-12 bg-[#2a231d]/30"></div>
+                                <h2 className="text-2xl md:text-3xl font-bold text-[#2a231d]">奇门遁甲 · 玩法一览</h2>
+                                <div className="h-px w-8 md:w-12 bg-[#2a231d]/30"></div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                                <div className="group relative bg-[#f9f5ea] p-6 border border-[#2a231d]/20 rounded-sm shadow-sm hover:shadow-md transition-all hover:-translate-y-1 overflow-hidden">
+                                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#2a231d]/5 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                                    <div className="relative z-10">
+                                        <div className="w-10 h-10 border border-[#2a231d] flex items-center justify-center mb-4 rounded-sm rotate-3 group-hover:rotate-0 transition-transform bg-white">
+                                            <Gem size={20} className="text-[#2a231d]" />
+                                        </div>
+                                        <h3 className="text-lg font-bold mb-2">双面人生</h3>
+                                        <p className="text-sm text-[#2a231d]/70 leading-relaxed">
+                                            点击切换主视角。<br/>
+                                            <span className="text-[#b91c1c]">淮安主簿</span>运筹帷幄，<br/>
+                                            <span className="text-[#b91c1c]">江湖游医</span>绝世独立。
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="group relative bg-[#f9f5ea] p-6 border border-[#2a231d]/20 rounded-sm shadow-sm hover:shadow-md transition-all hover:-translate-y-1 overflow-hidden">
+                                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-[#b91c1c]/5 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                                    <div className="relative z-10">
+                                        <div className="w-10 h-10 border border-[#b91c1c] flex items-center justify-center mb-4 rounded-sm -rotate-2 group-hover:rotate-0 transition-transform bg-white">
+                                            <Ghost size={20} className="text-[#b91c1c]" />
+                                        </div>
+                                        <h3 className="text-lg font-bold mb-2">鬼市淘宝</h3>
+                                        <p className="text-sm text-[#2a231d]/70 leading-relaxed">
+                                            收集奇葩神装。<br/>
+                                            <span className="font-bold">「埋人铁锹」</span>暴击+50%<br/>
+                                            <span className="font-bold">「削梨小刀」</span>破防+30%
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="group relative bg-[#f9f5ea] p-6 border border-[#2a231d]/20 rounded-sm shadow-sm hover:shadow-md transition-all hover:-translate-y-1 overflow-hidden">
+                                    <div className="relative z-10">
+                                        <div className="w-10 h-10 border border-[#d4af37] flex items-center justify-center mb-4 rounded-sm rotate-1 group-hover:rotate-0 transition-transform bg-white">
+                                            <Users size={20} className="text-[#d4af37]" />
+                                        </div>
+                                        <h3 className="text-lg font-bold mb-2">豪杰助战</h3>
+                                        <p className="text-sm text-[#2a231d]/70 leading-relaxed">
+                                            知己相逢，共赴生死。<br/>
+                                            召唤<span className="border-b border-[#2a231d]/30 mx-1">方多病</span><span className="border-b border-[#2a231d]/30 mx-1">笛飞声</span><br/>
+                                            解锁独家合体技。
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="group relative bg-[#f9f5ea] p-6 border border-[#2a231d]/20 rounded-sm shadow-sm hover:shadow-md transition-all hover:-translate-y-1 overflow-hidden">
+                                    <div className="relative z-10">
+                                        <div className="w-10 h-10 border border-[#2a231d] flex items-center justify-center mb-4 rounded-sm -rotate-3 group-hover:rotate-0 transition-transform bg-white">
+                                            <Sword size={20} className="text-[#2a231d]" />
+                                        </div>
+                                        <h3 className="text-lg font-bold mb-2">纸片乱斗</h3>
+                                        <p className="text-sm text-[#2a231d]/70 leading-relaxed">
+                                            全自动放置挂机。<br/>
+                                            看纸片人魔性互殴，<br/>
+                                            享受<span className="text-[#b91c1c] font-bold">9999+</span>伤害跳字的快感。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Achievement & Leaderboard */}
+                    <section className="py-12 md:py-20 bg-[#f9f5ea] border-t border-[#2a231d]/10">
+                        <div className="max-w-6xl mx-auto px-4 md:px-6">
+                            <div className="flex items-center justify-center mb-10 md:mb-16 gap-4">
+                                <Trophy className="w-6 h-6 md:w-7 md:h-7 text-[#d4af37]" />
+                                <h2 className="text-2xl md:text-3xl font-bold text-[#2a231d]">琅琊榜首 · 成就系统</h2>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                                <div className="bg-[#f0e6d2] p-6 md:p-8 rounded-sm shadow-sm border border-[#2a231d]/10 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#b91c1c]/5 rounded-bl-full"></div>
+                                    <h3 className="text-lg md:text-xl font-bold mb-6 flex items-center">
+                                        <Gem className="mr-2 text-[#b91c1c]" size={20}/> 藏宝阁
+                                    </h3>
+                                    <div className="space-y-6">
+                                        <div>
+                                            <div className="flex justify-between text-sm mb-2 font-bold text-[#2a231d]/80">
+                                                <span>神兵图谱 (Weapons)</span>
+                                                <span>8/12</span>
+                                            </div>
+                                            <div className="h-3 bg-[#2a231d]/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-[#b91c1c] w-2/3"></div>
+                                            </div>
+                                            <p className="text-xs text-[#2a231d]/50 mt-1">集齐可解锁「武林至尊」称号</p>
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-sm mb-2 font-bold text-[#2a231d]/80">
+                                                <span>锦衣华服 (Clothes)</span>
+                                                <span>45/50</span>
+                                            </div>
+                                            <div className="h-3 bg-[#2a231d]/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-[#d4af37] w-[90%]"></div>
+                                            </div>
+                                            <p className="text-xs text-[#2a231d]/50 mt-1">集齐可解锁「风华绝代」特效</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-[#2a231d] text-[#f0e6d2] p-6 md:p-8 rounded-sm shadow-lg relative">
+                                    <h3 className="text-lg md:text-xl font-bold mb-6 flex items-center text-[#d4af37]">
+                                        <Crown className="mr-2" size={20}/> 江湖战力榜
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {[
+                                            { rank: 1, name: "果果大魔王", power: "999,999", title: "天下第一" },
+                                            { rank: 2, name: "淇淇小仙女", power: "888,888", title: "绝世高手" },
+                                            { rank: 3, name: "百晓生", power: "777,777", title: "隐世高人" },
+                                        ].map((item) => (
+                                            <div key={item.rank} className="flex items-center justify-between p-3 bg-[#f0e6d2]/10 rounded border border-[#f0e6d2]/10">
+                                                <div className="flex items-center gap-2 md:gap-4">
+                                                    <div className={`w-6 h-6 flex items-center justify-center font-bold rounded-full text-xs md:text-sm ${item.rank === 1 ? 'bg-[#d4af37] text-[#2a231d]' : 'bg-[#f0e6d2]/20'}`}>
+                                                        {item.rank}
+                                                    </div>
+                                                    <span className="font-bold text-sm md:text-base">{item.name}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-[#d4af37] font-mono font-bold text-sm md:text-base">{item.power}</div>
+                                                    <div className="text-[10px] text-[#f0e6d2]/50">{item.title}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-4 text-center text-xs text-[#f0e6d2]/30">
+                                        数据实时更新中...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Timeline */}
+                    <section className="py-12 md:py-20 bg-[#2a231d] text-[#f0e6d2] overflow-hidden">
+                        <div className="max-w-7xl mx-auto px-4 md:px-6">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12">
+                                <div className="mb-4 md:mb-0">
+                                    <h2 className="text-2xl md:text-3xl font-bold mb-2 text-[#d4af37]">江湖画卷</h2>
+                                    <p className="text-[#f0e6d2]/60 text-sm">拖动查看完整时间轴</p>
+                                </div>
+                                <div className="flex space-x-4 w-full md:w-auto">
+                                    <button 
+                                        onClick={() => setActiveTab('chang-an')}
+                                        className={`flex-1 md:flex-none px-4 py-2 text-sm border transition-colors ${activeTab === 'chang-an' ? 'bg-[#f0e6d2] text-[#2a231d] border-[#f0e6d2]' : 'border-[#f0e6d2]/30 text-[#f0e6d2]/50'}`}
+                                    >
+                                        长安线
+                                    </button>
+                                    <button 
+                                        onClick={() => setActiveTab('jiang-hu')}
+                                        className={`flex-1 md:flex-none px-4 py-2 text-sm border transition-colors ${activeTab === 'jiang-hu' ? 'bg-[#b91c1c] text-[#f0e6d2] border-[#b91c1c]' : 'border-[#f0e6d2]/30 text-[#f0e6d2]/50'}`}
+                                    >
+                                        江湖线
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto pb-8 hide-scrollbar cursor-grab active:cursor-grabbing -mx-4 px-4 md:mx-0 md:px-0">
+                                <div className="flex space-x-8 md:space-x-12 min-w-max">
+                                    {activeTab === 'chang-an' ? (
+                                        <>
+                                            <TimelineCard title="初入长安" role="钦差大臣" quote="这长安城的风，吹得人头疼。" level="Lv.1" />
+                                            <Arrow />
+                                            <TimelineCard title="暗流涌动" role="虎贲暗卫" quote="看来这把铁锹，今日是要见血了。" level="Lv.15" />
+                                            <Arrow />
+                                            <TimelineCard title="鬼市迷踪" role="大理寺卿" quote="真相，往往藏在最脏的地方。" level="Lv.30" />
+                                            <Arrow />
+                                            <TimelineCard title="决战子言" role="一品诰命" quote="你输就输在，话太多。" level="Lv.99" isBoss />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <TimelineCard title="东海之滨" role="江湖游医" quote="活着，比死了难多了。" level="Lv.1" />
+                                            <Arrow />
+                                            <TimelineCard title="朴锄山尸" role="神探李莲花" quote="那这把刀，我就收下了。" level="Lv.20" />
+                                            <Arrow />
+                                            <TimelineCard title="四顾门" role="门主归来" quote="有些事，忘了比记着好。" level="Lv.45" />
+                                            <Arrow />
+                                            <TimelineCard title="宿命之战" role="剑神李相夷" quote="单孤刀，这一剑，送你上路。" level="Lv.99" isBoss color="red"/>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Upcoming */}
+                    <section className="py-12 md:py-16 bg-[#f0e6d2] border-t-4 border-[#b91c1c] relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none flex items-center justify-center">
+                            <div className="text-[100px] md:text-[200px] font-black text-[#2a231d] rotate-12 whitespace-nowrap">即将上线</div>
+                        </div>
+
+                        <div className="max-w-6xl mx-auto px-4 md:px-6 relative z-10">
+                            <div className="text-center mb-12">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#2a231d] text-[#f0e6d2] text-xs font-bold rounded mb-4">
+                                    <Hammer size={12} />
+                                    <span>施工中 · In Development</span>
+                                </div>
+                                <h2 className="text-2xl md:text-3xl font-bold text-[#2a231d]">风雨欲来 · 更多角色</h2>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <UpcomingCard 
+                                    name="李沉舟" 
+                                    title="权力帮主" 
+                                    desc="拳即是权。独创「君临天下」拳意，一拳破万法。" 
+                                />
+                                <UpcomingCard 
+                                    name="玄夜" 
+                                    title="修罗尊主" 
+                                    desc="别再执着了，做我的帝后吧。全屏控制与精神魅惑。" 
+                                />
+                                <UpcomingCard 
+                                    name="王权富贵" 
+                                    title="道门兵人" 
+                                    desc="万水千山，你愿意陪我一起看吗？王权剑意，斩尽妖邪。" 
+                                />
+                            </div>
+                            <div className="text-center mt-12 text-[#2a231d]/60 font-bold text-sm md:text-base tracking-widest animate-pulse">
+                                更多角色和剧情正在开发中，敬请期待...
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Footer */}
+                    <footer className="bg-[#f0e6d2] border-t border-[#2a231d]/10 pt-16 pb-8 text-center relative">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#f0e6d2] px-4">
+                            <div className="w-10 h-10 md:w-12 md:h-12 bg-[#b91c1c] rounded-full flex items-center justify-center text-[#f0e6d2] border-4 border-[#f0e6d2]">
+                                <Crown className="w-5 h-5 md:w-6 md:h-6" />
+                            </div>
+                        </div>
+
+                        <div className="max-w-md mx-auto px-6">
+                            <h3 className="text-lg md:text-xl font-bold text-[#2a231d] mb-6">已获得邀请码？</h3>
+                            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                                <input 
+                                    type="text" 
+                                    placeholder="请输入通关文牒 (邀请码)" 
+                                    className="w-full px-4 py-3 bg-white border border-[#2a231d]/20 rounded-sm text-[#2a231d] focus:outline-none focus:border-[#b91c1c] font-serif text-center sm:text-left"
+                                />
+                                <button className="w-full sm:w-auto px-6 py-3 bg-[#2a231d] text-[#f0e6d2] font-bold rounded-sm hover:bg-[#b91c1c] transition-colors whitespace-nowrap">
+                                    验明正身
+                                </button>
+                            </div>
+
+                            <button 
+                                onClick={() => setShowQuiz(true)}
+                                className="text-sm text-[#b91c1c] hover:underline mb-8 font-bold flex items-center justify-center gap-1 mx-auto"
+                            >
+                                <HelpCircle size={14} /> 答题赢邀请码 (含成毅超话验证)
+                            </button>
+                            
+                            <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-[#2a231d]/40 text-sm mb-8">
+                                <a href="#" className="hover:text-[#b91c1c]">用户协议</a>
+                                <span className="hidden md:inline">|</span>
+                                <a href="#" className="hover:text-[#b91c1c]">隐私政策</a>
+                                <span className="hidden md:inline">|</span>
+                                <a href="#" className="hover:text-[#b91c1c]">联系客服</a>
+                            </div>
+
+                            <p className="text-xs text-[#2a231d]/30">
+                                © 2024 Paper Jianghu Studio. <br/>
+                                Made with ❤ for 淇淇 & 果果.
+                            </p>
+                        </div>
+                    </footer>
+
+                    {/* Quiz Modal */}
+                    {showQuiz && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#2a231d]/80 backdrop-blur-sm animate-in fade-in duration-200">
+                            <div className={`bg-[#f0e6d2] w-[95%] sm:max-w-md rounded-sm shadow-2xl overflow-hidden relative border-4 border-[#2a231d] ${shake ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+                                
+                                <button onClick={resetQuiz} className="absolute top-3 right-3 md:top-4 md:right-4 text-[#2a231d]/50 hover:text-[#b91c1c]">
+                                    <X size={24} />
+                                </button>
+
+                                <div className="bg-[#b91c1c] p-4 md:p-6 text-center">
+                                    <h3 className="text-lg md:text-xl font-bold text-[#f0e6d2]">真爱粉试炼</h3>
+                                    <p className="text-[#f0e6d2]/80 text-xs mt-1">答对5题 + 验证超话等级 = 3个邀请码</p>
+                                </div>
+
+                                <div className="p-6 md:p-8 max-h-[70vh] overflow-y-auto">
+                                    {quizStep === 0 && (
+                                        <div className="text-center">
+                                            <HelpCircle className="w-10 h-10 md:w-12 md:h-12 mx-auto text-[#d4af37] mb-4" />
+                                            <p className="mb-6 font-bold text-sm md:text-base">准备好接受考验了吗？<br/>只有<span className="text-[#b91c1c]">成毅超话10级</span>以上的真爱粉<br/>才能通过验证并获得邀请码。</p>
+                                            <p className="text-xs text-[#2a231d]/50 mb-6 bg-[#2a231d]/5 p-2 rounded">
+                                                提示：通过验证后，您将一次性获得 3 个邀请码，可以分享给其他小伙伴入局。
+                                            </p>
+                                            <button onClick={() => setQuizStep(1)} className="w-full py-3 bg-[#2a231d] text-[#f0e6d2] font-bold rounded-sm hover:bg-[#b91c1c] transition-colors">
+                                                开始答题 (0/5)
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {quizStep === 1 && (
+                                        <div>
+                                            <div className="text-xs font-bold text-[#b91c1c] mb-2">第一题 (1/5)</div>
+                                            <h4 className="text-base md:text-lg font-bold mb-4 md:mb-6">谢淮安随身携带的“杀伤性武器”是？</h4>
+                                            <div className="space-y-3">
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">A. 尚方宝剑</button>
+                                                <button onClick={() => handleAnswer(true)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">B. 埋人铁锹</button>
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">C. 判官笔</button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {quizStep === 2 && (
+                                        <div>
+                                            <div className="text-xs font-bold text-[#b91c1c] mb-2">第二题 (2/5)</div>
+                                            <h4 className="text-base md:text-lg font-bold mb-4 md:mb-6">李莲花现在的江湖身份是？</h4>
+                                            <div className="space-y-3">
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">A. 四顾门门主</button>
+                                                <button onClick={() => handleAnswer(true)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">B. 江湖游医</button>
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">C. 大熙太傅</button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {quizStep === 3 && (
+                                        <div>
+                                            <div className="text-xs font-bold text-[#b91c1c] mb-2">第三题 (3/5)</div>
+                                            <h4 className="text-base md:text-lg font-bold mb-4 md:mb-6">即将上线的角色“王权富贵”的称号是？</h4>
+                                            <div className="space-y-3">
+                                                <button onClick={() => handleAnswer(true)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">A. 道门兵人</button>
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">B. 妖族少主</button>
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">C. 一气道盟盟主</button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {quizStep === 4 && (
+                                        <div>
+                                            <div className="text-xs font-bold text-[#b91c1c] mb-2">第四题 (4/5)</div>
+                                            <h4 className="text-base md:text-lg font-bold mb-4 md:mb-6">李莲花行走江湖时，身边常伴一只名为“狐狸精”的宠物，它其实是？</h4>
+                                            <div className="space-y-3">
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">A. 一只猫</button>
+                                                <button onClick={() => handleAnswer(true)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">B. 一只黄狗</button>
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">C. 一只真的狐狸</button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {quizStep === 5 && (
+                                        <div>
+                                            <div className="text-xs font-bold text-[#b91c1c] mb-2">第五题 (5/5)</div>
+                                            <h4 className="text-base md:text-lg font-bold mb-4 md:mb-6">本游戏的双男主（谢淮安/李莲花）均由哪位演员饰演？</h4>
+                                            <div className="space-y-3">
+                                                <button onClick={() => handleAnswer(true)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">A. 成毅</button>
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">B. 傅诗淇</button>
+                                                <button onClick={() => handleAnswer(false)} className="w-full p-3 border border-[#2a231d]/20 rounded-sm hover:bg-[#2a231d] hover:text-[#f0e6d2] text-left text-sm md:text-base">C. 都是（选A就行）</button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {quizStep === 6 && (
+                                        <div>
+                                            <div className="text-xs font-bold text-[#b91c1c] mb-2">最终验证</div>
+                                            <h4 className="text-base md:text-lg font-bold mb-4">全对！最后一步验证</h4>
+                                            <p className="text-sm text-[#2a231d]/70 mb-4">请输入您的微博昵称，系统将自动检测您是否为 <span className="font-bold text-[#b91c1c]">成毅超话 Lv.10</span> 以上粉丝。</p>
+                                            <div className="relative mb-6">
+                                                <input 
+                                                    type="text" 
+                                                    value={weiboName}
+                                                    onChange={(e) => setWeiboName(e.target.value)}
+                                                    placeholder="微博昵称 (例: 淇淇的小果果)"
+                                                    className="w-full p-3 pl-10 border border-[#2a231d]/20 rounded-sm focus:outline-none focus:border-[#b91c1c] text-sm md:text-base"
+                                                />
+                                                <Search className="absolute left-3 top-3.5 text-[#2a231d]/30" size={16} />
+                                            </div>
+                                            <button onClick={handleVerify} className="w-full py-3 bg-[#2a231d] text-[#f0e6d2] font-bold rounded-sm hover:bg-[#b91c1c] transition-colors flex items-center justify-center gap-2 text-sm md:text-base">
+                                                验证超话等级 & 领取
+                                            </button>
+                                            <p className="text-xs text-[#2a231d]/40 text-center mt-3">*如果您没有达到10级，请寻找已获得的果果索要邀请码。</p>
+                                        </div>
+                                    )}
+
+                                    {quizStep === 7 && (
+                                        <div className="text-center py-8">
+                                            <Loader2 className="w-10 h-10 md:w-12 md:h-12 mx-auto text-[#b91c1c] animate-spin mb-4" />
+                                            <h4 className="text-base md:text-lg font-bold">正在连接微博接口...</h4>
+                                            <p className="text-sm text-[#2a231d]/60 mt-2">检测超话等级中，请稍候</p>
+                                        </div>
+                                    )}
+
+                                    {quizStep === 8 && (
+                                        <div className="text-center">
+                                            <div className="w-14 h-14 md:w-16 md:h-16 bg-[#d4af37]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <CheckCircle className="w-7 h-7 md:w-8 md:h-8 text-[#d4af37]" />
+                                            </div>
+                                            <h4 className="text-lg md:text-xl font-bold mb-2">验证通过！(Lv.10+)</h4>
+                                            <p className="text-xs md:text-sm text-[#2a231d]/70 mb-6">这是您的 <span className="text-[#b91c1c] font-bold">3个</span> 专属邀请码，可以分给其他奇毅果。</p>
+                                            
+                                            <div className="space-y-2 mb-6">
+                                                {generatedCodes.map((code, idx) => (
+                                                    <div key={idx} className="bg-[#2a231d] p-3 rounded-sm relative group cursor-pointer hover:bg-[#2a231d]/90" onClick={() => copyToClipboard(code, idx)}>
+                                                        <div className="text-[#d4af37] font-mono text-base md:text-lg font-bold tracking-widest break-all">{code}</div>
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-[#2a231d] opacity-0 group-hover:opacity-100 transition-opacity text-[#f0e6d2] text-xs font-bold">
+                                                            {copiedIndex === idx ? <><CheckCircle size={12} className="mr-1"/> 已复制</> : <><Copy size={12} className="mr-1" /> 点击复制</>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <button onClick={resetQuiz} className="text-xs md:text-sm text-[#2a231d]/50 hover:text-[#b91c1c] underline">
+                                                关闭窗口
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Subcomponents
+        function TimelineCard({ title, role, quote, level, isBoss, color }) {
+            return (
+                <div className={`relative flex-shrink-0 w-64 p-6 border-l-4 ${isBoss ? 'border-[#b91c1c] bg-[#b91c1c]/10' : 'border-[#d4af37] bg-[#f0e6d2]/5'} rounded-r-sm`}>
+                    <div className="flex justify-between items-start mb-4">
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${isBoss ? 'bg-[#b91c1c] text-white' : 'bg-[#d4af37] text-[#2a231d]'}`}>
+                            {level}
+                        </span>
+                        {isBoss && <Sparkles size={16} className="text-[#b91c1c]" />}
+                    </div>
+                    <h4 className={`text-xl font-bold mb-1 ${color === 'red' ? 'text-[#b91c1c]' : 'text-[#f0e6d2]'}`}>{title}</h4>
+                    <p className="text-sm text-[#d4af37] mb-4">{role}</p>
+                    <div className="relative">
+                        <span className="text-4xl absolute -top-3 -left-2 text-[#f0e6d2]/10 font-serif">“</span>
+                        <p className="text-xs text-[#f0e6d2]/60 italic leading-relaxed pl-2 relative z-10">
+                            {quote}
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        function UpcomingCard({ name, title, desc }) {
+            return (
+                <div className="bg-white/50 border border-[#2a231d]/10 p-6 rounded-sm hover:bg-white hover:shadow-lg transition-all group cursor-default">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <h4 className="text-lg md:text-xl font-bold text-[#2a231d] group-hover:text-[#b91c1c] transition-colors">{name}</h4>
+                            <p className="text-[10px] md:text-xs font-bold text-[#d4af37] uppercase tracking-wider">{title}</p>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Medal size={20} className="text-[#b91c1c]" />
+                        </div>
+                    </div>
+                    <p className="text-xs md:text-sm text-[#2a231d]/70 leading-relaxed">{desc}</p>
+                </div>
+            );
+        }
+
+        function Arrow() {
+            return (
+                <div className="flex-shrink-0 flex items-center justify-center text-[#d4af37]/30">
+                    <ChevronRight size={24} />
+                </div>
+            );
+        }
+
+        // Render App
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PaperJianghu />);
+    </script>
+</body>
+</html>
