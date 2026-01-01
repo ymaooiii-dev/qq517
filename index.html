@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>纸上江湖 - 官方网站</title>
     
-    <!-- 1. 字体加速：使用国内 loli.net 镜像引入 Noto Serif SC 字体 -->
+    <!-- 1. 字体加速 -->
     <link rel="preconnect" href="https://fonts.loli.net">
     <link rel="preconnect" href="https://gstatic.loli.net" crossorigin>
     <link href="https://fonts.loli.net/css2?family=Noto+Serif+SC:wght@400;700;900&display=swap" rel="stylesheet">
@@ -13,57 +13,64 @@
     <!-- 2. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- 3. 核心库换源：使用国内 Staticfile CDN 镜像，无需梯子即可访问 -->
-    <!-- React -->
+    <!-- 3. React & Babel -->
     <script crossorigin src="https://cdn.staticfile.net/react/18.2.0/umd/react.production.min.js"></script>
-    <!-- ReactDOM -->
     <script crossorigin src="https://cdn.staticfile.net/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <!-- Babel (用于解析 JSX) -->
     <script src="https://cdn.staticfile.net/babel-standalone/7.23.5/babel.min.js"></script>
+
+    <!-- 4. Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     
     <style>
-        /* Custom Styles */
-        body {
-            /* 优先使用网络字体，回退到系统宋体 */
-            font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .writing-vertical {
-            writing-mode: vertical-rl;
-            text-orientation: upright;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
-        }
+        body { font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .writing-vertical { writing-mode: vertical-rl; text-orientation: upright; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
-        // --- Icons (Implemented as SVG components to avoid external dependency issues) ---
-        const Icon = ({ path, className, size = 24 }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                {path}
-            </svg>
-        );
+        // ==========================================
+        // ⚡️⚡️⚡️ 数据库配置区域 (已填入) ⚡️⚡️⚡️
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsR-raXlcfcl4cypSR0lucwa8WZ8NB3-U",
+            authDomain: "zsjh-4cd72.firebaseapp.com",
+            projectId: "zsjh-4cd72",
+            storageBucket: "zsjh-4cd72.firebasestorage.app",
+            messagingSenderId: "159277988582",
+            appId: "1:159277988582:web:1024db59f3eebe21549927"
+        };
 
+        // 初始化 Firebase
+        let db = null;
+        try {
+            if (firebaseConfig.apiKey) {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                console.log("云端数据库已连接: zsjh-4cd72");
+            } else {
+                console.warn("未检测到数据库配置，将在本地演示模式下运行");
+            }
+        } catch (e) { console.error("Firebase 初始化失败:", e); }
+
+        // 本地演示用的备用数据（仅在未连接数据库时使用）
+        const DEMO_CODES = [
+            "CY-Lv10-88-1", "CY-Lv10-92-3", "CY-Lv10-74-5", "CY-Lv10-61-9",
+            "CY-Lv10-55-2"
+        ];
+
+        // --- Icons ---
+        const Icon = ({ path, className, size = 24 }) => ( <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg> );
         const Scroll = (props) => <Icon {...props} path={<><path d="M8 19l-2 2-2-2"/><path d="M2 15V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10"/><path d="M14 2v6h6"/><path d="M8 19v-8"/><path d="M12 19V7"/><path d="M16 19v-4"/></>} />;
-        const Sword = (props) => <Icon {...props} path={<><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></>} />; // Simplified sword
+        const Sword = (props) => <Icon {...props} path={<><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></>} />;
         const Users = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
         const Ghost = (props) => <Icon {...props} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
         const Gem = (props) => <Icon {...props} path={<><path d="M6 3h12l4 6-10 13L2 9z"/></>} />;
@@ -80,6 +87,7 @@
         const Copy = (props) => <Icon {...props} path={<><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>} />;
         const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} />;
         const Loader2 = (props) => <Icon {...props} path={<><path d="M21 12a9 9 0 1 1-6.219-8.56"/></>} />;
+        const AlertCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
 
         // --- Main Component ---
         function PaperJianghu() {
@@ -91,21 +99,29 @@
             const [generatedCodes, setGeneratedCodes] = useState([]);
             const [shake, setShake] = useState(false);
             const [copiedIndex, setCopiedIndex] = useState(null);
+            const [isSoldOut, setIsSoldOut] = useState(false);
+            const [isLoading, setIsLoading] = useState(false);
+            
+            // 本地演示模式逻辑 (当未配置 Firebase 时使用)
+            const [localCodes, setLocalCodes] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('paperJianghuCodes_Demo');
+                    return saved ? JSON.parse(saved) : DEMO_CODES;
+                } catch { return DEMO_CODES; }
+            });
+
+            // 如果没有连接数据库，同步本地存储
+            useEffect(() => {
+                if (!db) { 
+                    localStorage.setItem('paperJianghuCodes_Demo', JSON.stringify(localCodes));
+                }
+            }, [localCodes]);
 
             useEffect(() => {
                 const handleScroll = () => setScrolled(window.scrollY > 20);
                 window.addEventListener('scroll', handleScroll);
                 return () => window.removeEventListener('scroll', handleScroll);
             }, []);
-
-            const paperStyle = {
-                backgroundColor: '#f0e6d2',
-                backgroundImage: `
-                radial-gradient(#dbcbb0 1px, transparent 1px),
-                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E")
-                `,
-                backgroundSize: '20px 20px, auto'
-            };
 
             const handleAnswer = (isCorrect) => {
                 if (isCorrect) {
@@ -116,21 +132,88 @@
                 }
             };
 
+            // ⚡️ 核心：获取验证码逻辑 ⚡️
+            const fetchCodes = async () => {
+                setIsLoading(true);
+                
+                // 1. 如果连接了 Firebase (生产环境)
+                if (db) {
+                    try {
+                        const codesRef = db.collection('game_data').doc('codes');
+                        
+                        // 事务操作：确保多人同时点击时不会发重
+                        await db.runTransaction(async (transaction) => {
+                            const doc = await transaction.get(codesRef);
+                            if (!doc.exists) {
+                                throw "数据库中没有邀请码数据！请管理员先去后台初始化。";
+                            }
+
+                            const currentList = doc.data().list || [];
+                            
+                            // 没码了
+                            if (currentList.length === 0) {
+                                setIsSoldOut(true);
+                                setGeneratedCodes([]);
+                                return;
+                            }
+
+                            // 取出2个，或者剩下的所有
+                            const countToTake = Math.min(2, currentList.length);
+                            const takenCodes = currentList.slice(0, countToTake);
+                            const remainingCodes = currentList.slice(countToTake);
+
+                            // 写回数据库
+                            transaction.update(codesRef, { list: remainingCodes });
+                            
+                            setGeneratedCodes(takenCodes);
+                            if (remainingCodes.length === 0) setIsSoldOut(true);
+                        });
+                        
+                        setQuizStep(8); // 跳到成功页
+                    } catch (error) {
+                        console.error("领取失败: ", error);
+                        // 如果是数据库不存在的错误，友好提示
+                        if (error.toString().includes("没有邀请码数据")) {
+                            alert("邀请码库尚未初始化，请联系管理员！");
+                        } else {
+                            alert("领取失败，可能是网络问题或已被抢光。");
+                        }
+                    } finally {
+                        setIsLoading(false);
+                    }
+                } 
+                // 2. 如果没有 Firebase (本地演示)
+                else {
+                    console.log("使用本地演示数据...");
+                    setTimeout(() => {
+                        if (localCodes.length === 0) {
+                            setIsSoldOut(true);
+                            setQuizStep(8);
+                            setIsLoading(false);
+                            return;
+                        }
+                        const countToTake = Math.min(2, localCodes.length);
+                        const taken = localCodes.slice(0, countToTake);
+                        const remaining = localCodes.slice(countToTake);
+                        
+                        setLocalCodes(remaining);
+                        setGeneratedCodes(taken);
+                        if (remaining.length === 0) setIsSoldOut(true);
+                        
+                        setQuizStep(8);
+                        setIsLoading(false);
+                    }, 1500);
+                }
+            };
+
             const handleVerify = () => {
                 if (!weiboName.trim()) {
                     setShake(true);
                     setTimeout(() => setShake(false), 500);
                     return;
                 }
-                setQuizStep(7);
-                setTimeout(() => {
-                    const codes = Array(3).fill(0).map((_, i) => {
-                        const randomNum = Math.floor(1000 + Math.random() * 9000);
-                        return `CY-Lv10-${randomNum}-${i+1}`;
-                    });
-                    setGeneratedCodes(codes);
-                    setQuizStep(8);
-                }, 2000);
+                setQuizStep(7); // Show loading
+                fetchCodes();
             };
 
             const resetQuiz = () => {
@@ -153,10 +236,14 @@
                     document.execCommand('copy');
                     setCopiedIndex(index);
                     setTimeout(() => setCopiedIndex(null), 2000);
-                } catch (err) {
-                    console.error('Fallback: Oops, unable to copy', err);
-                }
+                } catch (err) {}
                 document.body.removeChild(textArea);
+            };
+
+            const paperStyle = {
+                backgroundColor: '#f0e6d2',
+                backgroundImage: `radial-gradient(#dbcbb0 1px, transparent 1px), url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E")`,
+                backgroundSize: '20px 20px, auto'
             };
 
             return (
@@ -250,14 +337,14 @@
                                 <div className="flex flex-col items-center group cursor-pointer w-full md:w-auto">
                                     <div className="relative w-40 h-56 md:w-64 md:h-80 transition-transform duration-500 hover:-translate-y-2 hover:-rotate-1">
                                         <div className="absolute inset-0 bg-black/10 transform translate-x-2 translate-y-2 blur-sm rounded-lg" style={{clipPath: 'polygon(5% 5%, 90% 0, 100% 95%, 10% 100%)'}}></div>
-                                        <svg viewBox="0 0 200 300" className="w-full h-full drop-shadow-xl animate-[float_4s_ease-in-out_infinite_1s]">
+                                        <svg viewBox="0 0 200 300" className="w-full h-full drop-shadow-xl animate-[float_4s_ease-in-out_infinite]">
+                                            <path d="M100 45 Q 60 80 65 160" stroke="#9ca3af" strokeWidth="4" fill="none"/>
+                                            <path d="M100 45 Q 140 80 135 160" stroke="#9ca3af" strokeWidth="4" fill="none"/>
                                             <line x1="100" y1="80" x2="100" y2="200" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
-                                            <path d="M100 100 Q 140 150 130 250" stroke="#2a231d" strokeWidth="2" fill="none" strokeDasharray="5,5"/>
-                                            <path d="M100 100 Q 60 150 70 250" stroke="#2a231d" strokeWidth="2" fill="none" strokeDasharray="5,5"/>
-                                            <line x1="100" y1="200" x2="85" y2="280" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
-                                            <line x1="100" y1="200" x2="115" y2="280" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
-                                            <line x1="100" y1="110" x2="70" y2="150" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
-                                            <line x1="100" y1="110" x2="150" y2="140" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="200" x2="70" y2="280" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="200" x2="130" y2="280" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="110" x2="60" y2="150" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
+                                            <line x1="100" y1="110" x2="140" y2="150" stroke="#2a231d" strokeWidth="4" strokeLinecap="round"/>
                                             <circle cx="100" cy="60" r="25" fill="#f0e6d2" stroke="#2a231d" strokeWidth="4"/>
                                             <path d="M100 35 L100 10" stroke="#2a231d" strokeWidth="3"/>
                                             <circle cx="100" cy="10" r="3" fill="#2a231d"/>
@@ -561,7 +648,7 @@
 
                                 <div className="bg-[#b91c1c] p-4 md:p-6 text-center">
                                     <h3 className="text-lg md:text-xl font-bold text-[#f0e6d2]">真爱粉试炼</h3>
-                                    <p className="text-[#f0e6d2]/80 text-xs mt-1">答对5题 + 验证超话等级 = 3个邀请码</p>
+                                    <p className="text-[#f0e6d2]/80 text-xs mt-1">答对5题 + 验证超话等级 = 2个邀请码</p>
                                 </div>
 
                                 <div className="p-6 md:p-8 max-h-[70vh] overflow-y-auto">
@@ -570,7 +657,7 @@
                                             <HelpCircle className="w-10 h-10 md:w-12 md:h-12 mx-auto text-[#d4af37] mb-4" />
                                             <p className="mb-6 font-bold text-sm md:text-base">准备好接受考验了吗？<br/>只有<span className="text-[#b91c1c]">成毅超话10级</span>以上的真爱粉<br/>才能通过验证并获得邀请码。</p>
                                             <p className="text-xs text-[#2a231d]/50 mb-6 bg-[#2a231d]/5 p-2 rounded">
-                                                提示：通过验证后，您将一次性获得 3 个邀请码，可以分享给其他小伙伴入局。
+                                                提示：通过验证后，您将一次性获得 2 个邀请码，可以分享给其他小伙伴入局。
                                             </p>
                                             <button onClick={() => setQuizStep(1)} className="w-full py-3 bg-[#2a231d] text-[#f0e6d2] font-bold rounded-sm hover:bg-[#b91c1c] transition-colors">
                                                 开始答题 (0/5)
@@ -671,21 +758,36 @@
                                     {quizStep === 8 && (
                                         <div className="text-center">
                                             <div className="w-14 h-14 md:w-16 md:h-16 bg-[#d4af37]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <CheckCircle className="w-7 h-7 md:w-8 md:h-8 text-[#d4af37]" />
+                                                {isSoldOut ? (
+                                                    <AlertCircle className="w-7 h-7 md:w-8 md:h-8 text-[#b91c1c]" />
+                                                ) : (
+                                                    <CheckCircle className="w-7 h-7 md:w-8 md:h-8 text-[#d4af37]" />
+                                                )}
                                             </div>
-                                            <h4 className="text-lg md:text-xl font-bold mb-2">验证通过！(Lv.10+)</h4>
-                                            <p className="text-xs md:text-sm text-[#2a231d]/70 mb-6">这是您的 <span className="text-[#b91c1c] font-bold">3个</span> 专属邀请码，可以分给其他奇毅果。</p>
                                             
-                                            <div className="space-y-2 mb-6">
-                                                {generatedCodes.map((code, idx) => (
-                                                    <div key={idx} className="bg-[#2a231d] p-3 rounded-sm relative group cursor-pointer hover:bg-[#2a231d]/90" onClick={() => copyToClipboard(code, idx)}>
-                                                        <div className="text-[#d4af37] font-mono text-base md:text-lg font-bold tracking-widest break-all">{code}</div>
-                                                        <div className="absolute inset-0 flex items-center justify-center bg-[#2a231d] opacity-0 group-hover:opacity-100 transition-opacity text-[#f0e6d2] text-xs font-bold">
-                                                            {copiedIndex === idx ? <><CheckCircle size={12} className="mr-1"/> 已复制</> : <><Copy size={12} className="mr-1" /> 点击复制</>}
+                                            <h4 className="text-lg md:text-xl font-bold mb-2">
+                                                {isSoldOut ? "哎呀，来晚了！" : "验证通过！(Lv.10+)"}
+                                            </h4>
+                                            
+                                            <p className="text-xs md:text-sm text-[#2a231d]/70 mb-6">
+                                                {isSoldOut 
+                                                    ? "今日邀请码已发放完毕，请明天再来试试运气吧！" 
+                                                    : <span>这是您的 <span className="text-[#b91c1c] font-bold">2个</span> 专属邀请码，可以分给其他奇毅果。</span>
+                                                }
+                                            </p>
+                                            
+                                            {!isSoldOut && (
+                                                <div className="space-y-2 mb-6">
+                                                    {generatedCodes.map((code, idx) => (
+                                                        <div key={idx} className="bg-[#2a231d] p-3 rounded-sm relative group cursor-pointer hover:bg-[#2a231d]/90" onClick={() => copyToClipboard(code, idx)}>
+                                                            <div className="text-[#d4af37] font-mono text-base md:text-lg font-bold tracking-widest break-all">{code}</div>
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-[#2a231d] opacity-0 group-hover:opacity-100 transition-opacity text-[#f0e6d2] text-xs font-bold">
+                                                                {copiedIndex === idx ? <><CheckCircle size={12} className="mr-1"/> 已复制</> : <><Copy size={12} className="mr-1" /> 点击复制</>}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                                    ))}
+                                                </div>
+                                            )}
 
                                             <button onClick={resetQuiz} className="text-xs md:text-sm text-[#2a231d]/50 hover:text-[#b91c1c] underline">
                                                 关闭窗口
